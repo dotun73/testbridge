@@ -1,13 +1,140 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+ provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(MEMBER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  projects      ProjectMember[]
+  testRuns      TestRun[]
+  notifications Notification[]
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model Project {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  githubRepo  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  members     ProjectMember[]
+  testCases   TestCase[]
+  testRuns    TestRun[]
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+}
+
+model TestCase {
+  id             String         @id @default(uuid())
+  title          String
+  description    String?
+  steps          String
+  expectedResult String
+  priority       Priority       @default(MEDIUM)
+  status         TestCaseStatus @default(DRAFT)
+  projectId      String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testResults    TestResult[]
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TestCaseStatus {
+  DRAFT
+  ACTIVE
+  DEPRECATED
+}
+
+model TestRun {
+  id          String        @id @default(uuid())
+  name        String
+  projectId   String
+  executedBy  String
+  status      TestRunStatus @default(IN_PROGRESS)
+  githubRef   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  executor    User          @relation(fields: [executedBy], references: [id])
+  testResults TestResult[]
+  notifications Notification[]
+}
+
+enum TestRunStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABORTED
+}
+
+model TestResult {
+  id          String       @id @default(uuid())
+  testRunId   String
+  testCaseId  String
+  status      ResultStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  testRun     TestRun      @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testCase    TestCase     @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+}
+
+enum ResultStatus {
+  PENDING
+  PASS
+  FAIL
+  BLOCKED
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  testRunId String?
+  type      NotificationType
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testRun   TestRun?         @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+}
+
+enum NotificationType {
+  TEST_FAILED
+  TEST_RUN_COMPLETED
+  MEMBER_INVITED
 }
