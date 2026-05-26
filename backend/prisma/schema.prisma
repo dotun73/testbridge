@@ -18,6 +18,9 @@ model User {
   projects      ProjectMember[]
   testRuns      TestRun[]
   notifications Notification[]
+
+  reportedBugs  Bug[]  @relation("BugReporter")
+  assignedBugs  Bug[]  @relation("BugAssignee")
 }
 
 enum Role {
@@ -36,6 +39,8 @@ model Project {
   members     ProjectMember[]
   testCases   TestCase[]
   testRuns    TestRun[]
+
+  bugs          Bug[]
 }
 
 model ProjectMember {
@@ -137,4 +142,38 @@ enum NotificationType {
   TEST_FAILED
   TEST_RUN_COMPLETED
   MEMBER_INVITED
+}
+
+model Bug {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  severity    Severity  @default(MEDIUM)
+  priority    Priority  @default(MEDIUM)
+  status      BugStatus @default(OPEN)
+  environment String?
+  projectId   String
+  reportedBy  String
+  assignedTo  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reporter    User      @relation("BugReporter", fields: [reportedBy], references: [id])
+  assignee    User?     @relation("BugAssignee", fields: [assignedTo], references: [id])
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BugStatus {
+  OPEN
+  IN_PROGRESS
+  IN_REVIEW
+  CLOSED
+  RETEST
 }
