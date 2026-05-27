@@ -18,8 +18,6 @@ const statusColors: Record<string, string> = {
   RETEST: 'bg-yellow-100 text-yellow-700',
 }
 
-const formatStatus = (status: string) =>
-  status.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 
 const DEFAULT_PROJECT_ID = '53f0a7a7-981b-467b-abf4-bfc16b78bc22'
 
