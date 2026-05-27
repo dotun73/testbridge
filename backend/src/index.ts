@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import authRoutes from './routes/authRoutes'
 import bugRoutes from './routes/bugRoutes'
+import testRunRoutes from './routes/testRunRoutes'
 
 dotenv.config()
 
@@ -15,6 +16,7 @@ app.use(express.json())
 // Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/bugs', bugRoutes)
+app.use('/api/test-runs', testRunRoutes)
 
 app.get('/', (req, res) => {
   res.json({ message: 'TestBridge API is running 🚀' })
