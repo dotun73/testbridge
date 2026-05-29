@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { authService } from '../services/authService'
-import { Bug, PlayCircle, CheckCircle, TrendingUp } from 'lucide-react'
+import { Bug, PlayCircle, CheckCircle, } from 'lucide-react'
 
 interface DashboardStats {
   openBugs: number
