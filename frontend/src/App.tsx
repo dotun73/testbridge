@@ -8,6 +8,7 @@ import AnalyticsPage from './pages/AnalyticsPage'
 import SettingsPage from './pages/SettingsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
+import TestCasesPage from './pages/TestCasesPage'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/test-cases" element={<TestCasesPage />} />
               </Routes>
             </Layout>
           </ProtectedRoute>

@@ -12,6 +12,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ClipboardList,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 
@@ -22,6 +23,7 @@ interface Props {
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { label: 'Bugs', icon: Bug, path: '/bugs' },
+  { label: 'Test Cases', icon: ClipboardList, path: '/test-cases' },
   { label: 'Test Runs', icon: PlayCircle, path: '/test-runs' },
   { label: 'Analytics', icon: BarChart2, path: '/analytics' },
   { label: 'Settings', icon: Settings, path: '/settings' },

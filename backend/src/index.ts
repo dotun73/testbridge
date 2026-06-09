@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import authRoutes from './routes/authRoutes'
 import bugRoutes from './routes/bugRoutes'
 import testRunRoutes from './routes/testRunRoutes'
+import testCaseRoutes from './routes/testCaseRoutes'
 import prisma from './config/prisma'
 
 dotenv.config()
@@ -18,10 +19,7 @@ app.use(express.json())
 app.use('/api/auth', authRoutes)
 app.use('/api/bugs', bugRoutes)
 app.use('/api/test-runs', testRunRoutes)
-
-app.get('/', (req, res) => {
-  res.json({ message: 'TestBridge API is running 🚀' })
-})
+app.use('/api/test-cases', testCaseRoutes)
 
 // Dashboard stats
 app.get('/api/dashboard/stats', async (req: any, res: any) => {
@@ -57,6 +55,10 @@ app.get('/api/dashboard/stats', async (req: any, res: any) => {
     console.error('Dashboard stats error:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
+})
+
+app.get('/', (req, res) => {
+  res.json({ message: 'TestBridge API is running 🚀' })
 })
 
 app.listen(PORT, () => {
