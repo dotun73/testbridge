@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Plus, PlayCircle, CheckCircle, XCircle, GitBranch } from 'lucide-react'
 import { testRunService } from '../services/testRunService'
 import type { TestRun, CreateTestRunData } from '../services/testRunService'
+import { useProject } from '../context/ProjectContext'
 
-const DEFAULT_PROJECT_ID = '53f0a7a7-981b-467b-abf4-bfc16b78bc22'
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   IN_PROGRESS: { label: 'In Progress', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: PlayCircle },
@@ -31,6 +31,7 @@ const getResultCounts = (testRun: TestRun) => {
 }
 
 const TestRunsPage = () => {
+  const { selectedProject } = useProject()
   const [testRuns, setTestRuns] = useState<TestRun[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('All')
@@ -40,7 +41,7 @@ const TestRunsPage = () => {
 
   const [form, setForm] = useState<CreateTestRunData>({
     name: '',
-    projectId: DEFAULT_PROJECT_ID,
+    projectId: selectedProject?.id || '',
     githubRef: '',
   })
 
@@ -72,7 +73,7 @@ const TestRunsPage = () => {
     try {
       await testRunService.createTestRun(form)
       setShowForm(false)
-      setForm({ name: '', projectId: DEFAULT_PROJECT_ID, githubRef: '' })
+      setForm({ name: '', projectId: selectedProject?.id || '', githubRef: '' })
       fetchTestRuns()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create test run')

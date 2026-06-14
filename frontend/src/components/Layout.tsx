@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useProject } from '../context/ProjectContext'
 import {
   LayoutDashboard,
   Bug,
@@ -13,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Folder,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 
@@ -20,8 +22,10 @@ interface Props {
   children: React.ReactNode
 }
 
+
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { label: 'Projects', icon: Folder, path: '/projects' },
   { label: 'Bugs', icon: Bug, path: '/bugs' },
   { label: 'Test Cases', icon: ClipboardList, path: '/test-cases' },
   { label: 'Test Runs', icon: PlayCircle, path: '/test-runs' },
@@ -30,6 +34,7 @@ const navItems = [
 ]
 
 const Layout = ({ children }: Props) => {
+  const { projects, selectedProject, setSelectedProject } = useProject()
   const navigate = useNavigate()
   const location = useLocation()
   const user = authService.getUser()
@@ -78,6 +83,25 @@ const Layout = ({ children }: Props) => {
             <span className="font-bold text-gray-900 dark:text-white text-sm">TestBridge</span>
           )}
         </div>
+
+        {/* Project Switcher */}
+{!collapsed && (
+  <div className="px-3 py-3 border-b border-gray-100 dark:border-gray-800">
+    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mb-1.5 uppercase tracking-wide">Project</p>
+    <select
+      value={selectedProject?.id || ''}
+      onChange={(e) => {
+        const project = projects.find(p => p.id === e.target.value)
+        if (project) setSelectedProject(project)
+      }}
+      className="w-full text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    >
+      {projects.map(p => (
+        <option key={p.id} value={p.id}>{p.name}</option>
+      ))}
+    </select>
+  </div>
+)}
 
         {/* Nav Items */}
         <nav className="flex-1 px-2 py-4 space-y-1">

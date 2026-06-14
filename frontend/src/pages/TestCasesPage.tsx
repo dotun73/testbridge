@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Plus, Search, ClipboardList, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { testCaseService } from '../services/testCaseService'
 import type { TestCase, CreateTestCaseData } from '../services/testCaseService'
+import { useProject } from '../context/ProjectContext'
 
-const DEFAULT_PROJECT_ID = '53f0a7a7-981b-467b-abf4-bfc16b78bc22'
 
 const priorityColors: Record<string, string> = {
   LOW: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -18,6 +18,7 @@ const statusColors: Record<string, string> = {
 }
 
 const TestCasesPage = () => {
+  const { selectedProject } = useProject()
   const [testCases, setTestCases] = useState<TestCase[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -35,7 +36,7 @@ const TestCasesPage = () => {
     expectedResult: '',
     priority: 'MEDIUM',
     status: 'DRAFT',
-    projectId: DEFAULT_PROJECT_ID,
+    projectId: selectedProject?.id || '',
   })
 
   const fetchTestCases = async () => {
@@ -75,7 +76,7 @@ const TestCasesPage = () => {
         expectedResult: '',
         priority: 'MEDIUM',
         status: 'DRAFT',
-        projectId: DEFAULT_PROJECT_ID,
+        projectId: selectedProject?.id || '',
       })
       fetchTestCases()
     } catch (err: any) {

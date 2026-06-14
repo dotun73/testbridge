@@ -6,6 +6,7 @@ import bugRoutes from './routes/bugRoutes'
 import testRunRoutes from './routes/testRunRoutes'
 import testCaseRoutes from './routes/testCaseRoutes'
 import prisma from './config/prisma'
+import projectRoutes from './routes/projectRoutes'
 
 dotenv.config()
 
@@ -20,6 +21,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/bugs', bugRoutes)
 app.use('/api/test-runs', testRunRoutes)
 app.use('/api/test-cases', testCaseRoutes)
+app.use('/api/projects', projectRoutes)
 
 // Dashboard stats
 app.get('/api/dashboard/stats', async (req: any, res: any) => {

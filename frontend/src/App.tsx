@@ -9,6 +9,7 @@ import SettingsPage from './pages/SettingsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import TestCasesPage from './pages/TestCasesPage'
+import ProjectsPage from './pages/ProjectsPage'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <ProtectedRoute>
             <Layout>
               <Routes>
+                <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/bugs" element={<BugsPage />} />
                 <Route path="/test-runs" element={<TestRunsPage />} />

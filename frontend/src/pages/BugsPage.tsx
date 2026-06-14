@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Plus, Search, Bug as BugIcon } from 'lucide-react'
 import { bugService } from '../services/bugService'
 import type { Bug, CreateBugData } from '../services/bugService'
+import { useProject } from '../context/ProjectContext'
 
 const severityColors: Record<string, string> = {
   LOW: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
@@ -18,9 +19,9 @@ const statusColors: Record<string, string> = {
   RETEST: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
 
-const DEFAULT_PROJECT_ID = '53f0a7a7-981b-467b-abf4-bfc16b78bc22'
 
 const BugsPage = () => {
+  const { selectedProject } = useProject()
   const [bugs, setBugs] = useState<Bug[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -37,7 +38,7 @@ const BugsPage = () => {
     priority: 'MEDIUM',
     status: 'OPEN',
     environment: '',
-    projectId: DEFAULT_PROJECT_ID,
+    projectId: selectedProject?.id || '',
   })
 
   const fetchBugs = async () => {
@@ -70,7 +71,7 @@ const BugsPage = () => {
     try {
       await bugService.createBug(form)
       setShowForm(false)
-      setForm({ title: '', description: '', severity: 'MEDIUM', priority: 'MEDIUM', status: 'OPEN', environment: '', projectId: DEFAULT_PROJECT_ID })
+      setForm({ title: '', description: '', severity: 'MEDIUM', priority: 'MEDIUM', status: 'OPEN', environment: '', projectId: selectedProject?.id || '' })
       fetchBugs()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create bug')
