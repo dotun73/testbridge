@@ -1,19 +1,28 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { authService } from '../services/authService'
+import { useProject } from '../context/ProjectContext'
 
 const AnalyticsPage = () => {
+  const { selectedProject } = useProject()
   const [bugs, setBugs] = useState<any[]>([])
   const [testRuns, setTestRuns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!selectedProject?.id) {
+        setBugs([])
+        setTestRuns([])
+        setLoading(false)
+        return
+      }
       try {
+        setLoading(true)
         const headers = { Authorization: `Bearer ${authService.getToken()}` }
         const [bugsRes, runsRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/bugs', { headers }),
-          axios.get('http://localhost:5000/api/test-runs', { headers }),
+          axios.get(`http://localhost:5000/api/bugs?projectId=${selectedProject.id}`, { headers }),
+          axios.get(`http://localhost:5000/api/test-runs?projectId=${selectedProject.id}`, { headers }),
         ])
         setBugs(bugsRes.data.bugs)
         setTestRuns(runsRes.data.testRuns)
@@ -24,7 +33,7 @@ const AnalyticsPage = () => {
       }
     }
     fetchData()
-  }, [])
+  }, [selectedProject])
 
   const severityData = [
     { label: 'Critical', value: bugs.filter(b => b.severity === 'CRITICAL').length, color: 'bg-red-500' },

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { authService } from '../services/authService'
 import { Bug, PlayCircle, CheckCircle } from 'lucide-react'
+import { useProject } from '../context/ProjectContext'
 
 interface DashboardStats {
   openBugs: number
@@ -22,22 +23,23 @@ const severityColors: Record<string, string> = {
 const DashboardPage = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
-
+  const { selectedProject } = useProject()
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await axios.get('http://localhost:5000/api/dashboard/stats', {
-          headers: { Authorization: `Bearer ${authService.getToken()}` }
-        })
-        setStats(response.data)
-      } catch (err) {
-        console.error('Failed to fetch dashboard stats:', err)
-      } finally {
-        setLoading(false)
-      }
+  const fetchStats = async () => {
+    if (!selectedProject) return
+    try {
+      const response = await axios.get(`http://localhost:5000/api/dashboard/stats?projectId=${selectedProject.id}`, {
+        headers: { Authorization: `Bearer ${authService.getToken()}` }
+      })
+      setStats(response.data)
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats:', err)
+    } finally {
+      setLoading(false)
     }
-    fetchStats()
-  }, [])
+  }
+  fetchStats()
+}, [selectedProject])
 
   if (loading) {
     return (

@@ -1,13 +1,14 @@
 import { Request, Response } from 'express'
 import prisma from '../config/prisma'
 
-// GET all bugs (optionally filtered by project)
+// GET all bugs (filtered by project and other criteria)
 export const getBugs = async (req: Request, res: Response) => {
   try {
-    const { status, severity, priority, search } = req.query
+    const { projectId, status, severity, priority, search } = req.query
 
     const bugs = await prisma.bug.findMany({
       where: {
+        ...(projectId && { projectId: projectId as string }),
         ...(status && { status: status as any }),
         ...(severity && { severity: severity as any }),
         ...(priority && { priority: priority as any }),

@@ -46,6 +46,11 @@ const TestRunsPage = () => {
   })
 
   const fetchTestRuns = async () => {
+    if (!selectedProject?.id) {
+      setTestRuns([])
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
       const statusMap: Record<string, string> = {
@@ -54,6 +59,7 @@ const TestRunsPage = () => {
         'Aborted': 'ABORTED',
       }
       const data = await testRunService.getTestRuns({
+        projectId: selectedProject.id,
         status: activeTab !== 'All' ? statusMap[activeTab] : undefined,
       })
       setTestRuns(data)
@@ -64,14 +70,19 @@ const TestRunsPage = () => {
     }
   }
 
-  useEffect(() => { fetchTestRuns() }, [activeTab])
+  useEffect(() => {
+    fetchTestRuns()
+  }, [selectedProject, activeTab])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setSubmitting(true)
     try {
-      await testRunService.createTestRun(form)
+      await testRunService.createTestRun({
+        ...form,
+        projectId: selectedProject?.id || ''
+      })
       setShowForm(false)
       setForm({ name: '', projectId: selectedProject?.id || '', githubRef: '' })
       fetchTestRuns()

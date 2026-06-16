@@ -1,13 +1,14 @@
 import { Request, Response } from 'express'
 import prisma from '../config/prisma'
 
-// GET all test cases
+// GET all test cases (filtered by project and other criteria)
 export const getTestCases = async (req: Request, res: Response) => {
   try {
-    const { status, priority, search } = req.query
+    const { projectId, status, priority, search } = req.query
 
     const testCases = await prisma.testCase.findMany({
       where: {
+        ...(projectId && { projectId: projectId as string }),
         ...(status && { status: status as any }),
         ...(priority && { priority: priority as any }),
         ...(search && {

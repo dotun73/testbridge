@@ -40,9 +40,15 @@ const TestCasesPage = () => {
   })
 
   const fetchTestCases = async () => {
+    if (!selectedProject?.id) {
+      setTestCases([])
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
       const data = await testCaseService.getTestCases({
+        projectId: selectedProject.id,
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
         search: search || undefined,
@@ -55,7 +61,9 @@ const TestCasesPage = () => {
     }
   }
 
-  useEffect(() => { fetchTestCases() }, [statusFilter, priorityFilter])
+  useEffect(() => {
+    fetchTestCases()
+  }, [selectedProject, statusFilter, priorityFilter])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,7 +75,10 @@ const TestCasesPage = () => {
     setError('')
     setSubmitting(true)
     try {
-      await testCaseService.createTestCase(form)
+      await testCaseService.createTestCase({
+        ...form,
+        projectId: selectedProject?.id || ''
+      })
       setShowForm(false)
       setForm({
         title: '',

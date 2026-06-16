@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Bug as BugIcon } from 'lucide-react'
+import { Plus, Search, Bug as BugIcon, Trash2 } from 'lucide-react'
 import { bugService } from '../services/bugService'
 import type { Bug, CreateBugData } from '../services/bugService'
 import { useProject } from '../context/ProjectContext'
@@ -18,7 +18,6 @@ const statusColors: Record<string, string> = {
   CLOSED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   RETEST: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
-
 
 const BugsPage = () => {
   const { selectedProject } = useProject()
@@ -42,9 +41,15 @@ const BugsPage = () => {
   })
 
   const fetchBugs = async () => {
+    if (!selectedProject?.id) {
+      setBugs([])
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
       const data = await bugService.getBugs({
+        projectId: selectedProject.id,
         status: statusFilter || undefined,
         severity: severityFilter || undefined,
         search: search || undefined,
@@ -57,7 +62,9 @@ const BugsPage = () => {
     }
   }
 
-  useEffect(() => { fetchBugs() }, [statusFilter, severityFilter])
+  useEffect(() => {
+    fetchBugs()
+  }, [selectedProject, statusFilter, severityFilter])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -69,7 +76,10 @@ const BugsPage = () => {
     setError('')
     setSubmitting(true)
     try {
-      await bugService.createBug(form)
+      await bugService.createBug({
+        ...form,
+        projectId: selectedProject?.id || ''
+      })
       setShowForm(false)
       setForm({ title: '', description: '', severity: 'MEDIUM', priority: 'MEDIUM', status: 'OPEN', environment: '', projectId: selectedProject?.id || '' })
       fetchBugs()
@@ -86,6 +96,16 @@ const BugsPage = () => {
       fetchBugs()
     } catch (err) {
       console.error('Failed to update bug:', err)
+    }
+  }
+
+  const handleDelete = async (bugId: string) => {
+    if (!confirm('Are you sure you want to delete this bug?')) return
+    try {
+      await bugService.deleteBug(bugId)
+      fetchBugs()
+    } catch (err) {
+      console.error('Failed to delete bug:', err)
     }
   }
 
@@ -189,6 +209,12 @@ const BugsPage = () => {
                 <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
                   {bug.reporter?.name?.split(' ').map((n: string) => n[0]).join('')}
                 </span>
+                <button
+                  onClick={() => handleDelete(bug.id)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition"
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             </div>
           ))}

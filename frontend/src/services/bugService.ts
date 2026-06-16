@@ -36,12 +36,14 @@ export interface CreateBugData {
 
 export const bugService = {
   async getBugs(filters?: {
+    projectId?: string
     status?: string
     severity?: string
     priority?: string
     search?: string
   }): Promise<Bug[]> {
     const params = new URLSearchParams()
+    if (filters?.projectId) params.append('projectId', filters.projectId)
     if (filters?.status) params.append('status', filters.status)
     if (filters?.severity) params.append('severity', filters.severity)
     if (filters?.priority) params.append('priority', filters.priority)
