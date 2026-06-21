@@ -13,9 +13,9 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   ClipboardList,
   Folder,
+  Search,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 
@@ -25,7 +25,6 @@ interface Props {
 
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-  { label: 'Projects', icon: Folder, path: '/projects' },
   { label: 'Bugs', icon: Bug, path: '/bugs' },
   { label: 'Test Cases', icon: ClipboardList, path: '/test-cases' },
   { label: 'Test Runs', icon: PlayCircle, path: '/test-runs' },
@@ -40,7 +39,11 @@ const Layout = ({ children }: Props) => {
   const [collapsed, setCollapsed] = useState(false)
   const [notifications] = useState(3)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [search, setSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [showSearchResults, setShowSearchResults] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLDivElement>(null)
 
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark'
@@ -61,10 +64,26 @@ const Layout = ({ children }: Props) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false)
       }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    if (!search.trim()) {
+      setSearchResults([])
+      setShowSearchResults(false)
+      return
+    }
+    const filtered = projects.filter(p =>
+      p.name.toLowerCase().includes(search.toLowerCase())
+    )
+    setSearchResults(filtered)
+    setShowSearchResults(true)
+  }, [search, projects])
 
   const handleLogout = () => {
     authService.logout()
@@ -77,86 +96,62 @@ const Layout = ({ children }: Props) => {
 
   return (
     <div className={darkMode ? 'dark' : ''} style={{ colorScheme: darkMode ? 'dark' : 'light' }}>
-      <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950">
 
-        {/* Sidebar */}
-        <aside className={`
-          flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300
-          ${collapsed ? 'w-16' : 'w-56'}
-        `}>
+        {/* Top Header */}
+        <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-3 flex items-center gap-4 flex-shrink-0 z-10">
 
           {/* Logo */}
-          <div className="flex items-center gap-3 px-4 py-5 border-b border-gray-100 dark:border-gray-800">
-            <div className="w-8 h-8 bg-indigo-900 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="w-8 h-8 bg-indigo-900 rounded-lg flex items-center justify-center">
               <span className="text-white text-xs font-bold">TB</span>
             </div>
-            {!collapsed && (
-              <span className="font-bold text-gray-900 dark:text-white text-sm">TestBridge</span>
-            )}
+            <span className="font-bold text-gray-900 dark:text-white text-sm">TestBridge</span>
           </div>
 
-          {/* Project Switcher */}
-          {!collapsed && (
-            <div className="px-3 py-3 border-b border-gray-100 dark:border-gray-800">
-              <p className="text-xs text-gray-400 dark:text-gray-500 font-medium mb-1.5 uppercase tracking-wide">Project</p>
-              <select
-                value={selectedProject?.id || ''}
-                onChange={(e) => {
-                  const project = projects.find(p => p.id === e.target.value)
-                  if (project) setSelectedProject(project)
-                }}
-                className="w-full text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {projects.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+          {/* Search bar */}
+          <div className="flex-1 flex justify-center">
+            <div className="relative w-full max-w-md" ref={searchRef}>
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder={`Search in ${selectedProject?.name || 'project'}...`}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              {showSearchResults && (
+                <div className="absolute top-10 left-0 right-0 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-50 overflow-hidden">
+                  {searchResults.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-400 dark:text-gray-500">No projects found</div>
+                  ) : (
+                    searchResults.map(project => (
+                      <button
+                        key={project.id}
+                        onClick={() => {
+                          setSelectedProject(project)
+                          setSearch('')
+                          setShowSearchResults(false)
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
+                      >
+                        <Folder size={15} className="text-gray-400 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium">{project.name}</p>
+                          {project.description && (
+                            <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{project.description}</p>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
-          )}
-
-          {/* Nav Items */}
-          <nav className="flex-1 px-2 py-4 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.path
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className={`
-                    w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition
-                    ${isActive
-                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
-                    }
-                    ${collapsed ? 'justify-center' : ''}
-                  `}
-                >
-                  <Icon size={18} className="flex-shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
-                </button>
-              )
-            })}
-          </nav>
-
-          {/* Collapse toggle */}
-          <div className="px-2 py-3 border-t border-gray-100 dark:border-gray-800">
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="w-full flex items-center justify-center p-2 rounded-lg text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition"
-            >
-              {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-            </button>
           </div>
-        </aside>
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-
-          {/* Top Header */}
-          <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-3 flex items-center justify-end gap-3">
-
-            {/* Dark mode toggle */}
+          {/* Right side icons */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={toggleDarkMode}
               className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-white transition"
@@ -165,7 +160,6 @@ const Layout = ({ children }: Props) => {
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            {/* Notifications */}
             <button className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
               <Bell size={18} />
               {notifications > 0 && (
@@ -175,32 +169,20 @@ const Layout = ({ children }: Props) => {
               )}
             </button>
 
-            {/* Divider */}
             <div className="w-px h-6 bg-gray-200 dark:bg-gray-700" />
 
-            {/* Profile dropdown */}
             <div className="relative" ref={profileMenuRef}>
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                className="w-9 h-9 bg-indigo-900 rounded-full flex items-center justify-center hover:ring-2 hover:ring-indigo-400 transition"
               >
-                <div className="w-8 h-8 bg-indigo-900 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs font-semibold">
-                    {user?.name?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div className="hidden sm:block text-left">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white leading-none">{user?.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{user?.role}</p>
-                </div>
-                <ChevronDown size={14} className={`text-gray-400 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
+                <span className="text-white text-sm font-semibold">
+                  {user?.name?.charAt(0).toUpperCase()}
+                </span>
               </button>
 
-              {/* Dropdown menu */}
               {showProfileMenu && (
                 <div className="absolute right-0 top-12 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-50 overflow-hidden">
-
-                  {/* User info header */}
                   <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-indigo-900 rounded-full flex items-center justify-center flex-shrink-0">
@@ -217,8 +199,6 @@ const Layout = ({ children }: Props) => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Menu items */}
                   <div className="py-1">
                     <button
                       onClick={() => { navigate('/settings'); setShowProfileMenu(false) }}
@@ -227,7 +207,6 @@ const Layout = ({ children }: Props) => {
                       <Settings size={16} className="text-gray-400" />
                       Settings
                     </button>
-
                     <button
                       onClick={() => { navigate('/projects'); setShowProfileMenu(false) }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
@@ -236,11 +215,7 @@ const Layout = ({ children }: Props) => {
                       Projects
                     </button>
                   </div>
-
-                  {/* Divider */}
                   <div className="border-t border-gray-100 dark:border-gray-800" />
-
-                  {/* Logout */}
                   <div className="py-1">
                     <button
                       onClick={() => { handleLogout(); setShowProfileMenu(false) }}
@@ -253,7 +228,95 @@ const Layout = ({ children }: Props) => {
                 </div>
               )}
             </div>
-          </header>
+          </div>
+        </header>
+
+        {/* Body: Sidebar + Content */}
+        <div className="flex flex-1 overflow-hidden">
+
+          {/* Sidebar */}
+          <aside className={`
+            flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 flex-shrink-0
+            ${collapsed ? 'w-16' : 'w-56'}
+          `}>
+
+            {/* Project Section */}
+            <div className={`border-b border-gray-100 dark:border-gray-800 ${collapsed ? 'px-2 py-3' : 'px-3 py-3'}`}>
+              {collapsed ? (
+                <button
+                  onClick={() => navigate('/projects')}
+                  className={`w-full flex items-center justify-center p-2 rounded-lg transition
+                    ${location.pathname === '/projects'
+                      ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                      : 'text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                >
+                  <Folder size={18} />
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => navigate('/projects')}
+                    className={`w-full flex items-center gap-2 mb-2 px-1 py-1 rounded-lg transition text-left
+                      ${location.pathname === '/projects'
+                        ? 'text-indigo-700 dark:text-indigo-400'
+                        : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
+                  >
+                    <Folder size={14} />
+                    <p className="text-xs font-medium uppercase tracking-wide">Projects</p>
+                  </button>
+                  <select
+                    value={selectedProject?.id || ''}
+                    onChange={(e) => {
+                      const project = projects.find(p => p.id === e.target.value)
+                      if (project) setSelectedProject(project)
+                    }}
+                    className="w-full text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </>
+              )}
+            </div>
+
+            {/* Nav Items */}
+            <nav className="flex-1 px-2 py-4 space-y-1">
+              {navItems.map((item) => {
+                const Icon = item.icon
+                const isActive = location.pathname === item.path
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    className={`
+                      w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition
+                      ${isActive
+                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                      }
+                      ${collapsed ? 'justify-center' : ''}
+                    `}
+                  >
+                    <Icon size={18} className="flex-shrink-0" />
+                    {!collapsed && <span>{item.label}</span>}
+                  </button>
+                )
+              })}
+            </nav>
+
+            {/* Collapse toggle */}
+            <div className="px-2 py-3 border-t border-gray-100 dark:border-gray-800">
+              <button
+                onClick={() => setCollapsed(!collapsed)}
+                className="w-full flex items-center justify-center p-2 rounded-lg text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition"
+              >
+                {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+              </button>
+            </div>
+          </aside>
 
           {/* Page content */}
           <main className="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-950">
