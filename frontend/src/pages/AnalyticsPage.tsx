@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { authService } from '../services/authService'
 import { useProject } from '../context/ProjectContext'
+import { motion } from 'framer-motion'
 
 const AnalyticsPage = () => {
   const { selectedProject } = useProject()
@@ -79,14 +80,23 @@ const AnalyticsPage = () => {
   }
 
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">QA metrics and insights</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05, duration: 0.3 }}
+          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5"
+        >
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Bug Severity Distribution</h2>
           {donutTotal === 0 ? (
             <div className="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">No data yet</div>
@@ -111,41 +121,67 @@ const AnalyticsPage = () => {
               </svg>
               <div className="space-y-2">
                 {severityData.map((d, i) => (
-                  <div key={i} className="flex items-center gap-2">
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + i * 0.05, duration: 0.25 }}
+                    className="flex items-center gap-2"
+                  >
                     <div className={`w-3 h-3 rounded-full ${d.color}`} />
                     <span className="text-sm text-gray-600 dark:text-gray-300">{d.label}</span>
                     <span className="text-sm font-semibold text-gray-900 dark:text-white ml-auto pl-4">{d.value}</span>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5"
+        >
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Bug Status Overview</h2>
           {bugs.length === 0 ? (
             <div className="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">No data yet</div>
           ) : (
             <div className="space-y-3 pt-2">
               {statusData.filter(d => d.value > 0).map((d, i) => (
-                <div key={i}>
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15 + i * 0.05, duration: 0.25 }}
+                >
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                     <span>{d.label}</span>
                     <span className="font-medium text-gray-700 dark:text-gray-300">{d.value}</span>
                   </div>
                   <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
-                    <div className={`${d.color} h-2 rounded-full transition-all duration-500`} style={{ width: `${(d.value / maxStatus) * 100}%` }} />
+                    <motion.div
+                      className={`${d.color} h-2 rounded-full`}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(d.value / maxStatus) * 100}%` }}
+                      transition={{ delay: 0.2 + i * 0.05, duration: 0.5, ease: 'easeOut' }}
+                    />
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
+          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5"
+        >
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Bug Summary</h2>
           <div className="grid grid-cols-2 gap-4">
             {[
@@ -154,36 +190,57 @@ const AnalyticsPage = () => {
               { label: 'Closed', value: bugs.filter(b => b.status === 'CLOSED').length, color: 'text-green-500' },
               { label: 'Critical', value: bugs.filter(b => b.severity === 'CRITICAL').length, color: 'text-red-600' },
             ].map((stat, i) => (
-              <div key={i} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center">
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.25 + i * 0.05, duration: 0.25 }}
+                className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 text-center"
+              >
                 <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stat.label}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.3 }}
+          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5"
+        >
           <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Test Run Pass Rates</h2>
           {passRateData.length === 0 ? (
             <div className="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">No data yet</div>
           ) : (
             <div className="space-y-3 pt-2">
               {passRateData.map((run, i) => (
-                <div key={i}>
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + i * 0.05, duration: 0.25 }}
+                >
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                     <span className="truncate flex-1 mr-2">{run.name}</span>
                     <span className="font-medium text-gray-700 dark:text-gray-300">{run.rate}%</span>
                   </div>
                   <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
-                    <div className="bg-green-500 h-2 rounded-full transition-all duration-500" style={{ width: `${run.rate}%` }} />
+                    <motion.div
+                      className="bg-green-500 h-2 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${run.rate}%` }}
+                      transition={{ delay: 0.35 + i * 0.05, duration: 0.5, ease: 'easeOut' }}
+                    />
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           )}
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
