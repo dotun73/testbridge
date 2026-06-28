@@ -18,7 +18,7 @@ const statusColors: Record<string, string> = {
 }
 
 const TestCasesPage = () => {
-  const { selectedProject } = useProject()
+  const { selectedProject, refreshProjects } = useProject()
   const [testCases, setTestCases] = useState<TestCase[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -75,13 +75,11 @@ const TestCasesPage = () => {
     setError('')
     setSubmitting(true)
     try {
-      await testCaseService.createTestCase({
-        ...form,
-        projectId: selectedProject?.id || ''
-      })
+      await testCaseService.createTestCase({ ...form, projectId: selectedProject?.id || '' })
       setShowForm(false)
       setForm({ title: '', description: '', steps: '', expectedResult: '', priority: 'MEDIUM', status: 'DRAFT', projectId: selectedProject?.id || '' })
       fetchTestCases()
+      refreshProjects()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create test case')
     } finally {
@@ -118,20 +116,19 @@ const TestCasesPage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ delay: 0.05, duration: 0.3 }}
         >
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Test Cases</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{testCases.length} test cases</p>
         </motion.div>
         <motion.button
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.05, duration: 0.3 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition"
         >
@@ -140,11 +137,10 @@ const TestCasesPage = () => {
         </motion.button>
       </div>
 
-      {/* Filters */}
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.3 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15, duration: 0.3 }}
         className="flex flex-wrap gap-3 mb-6"
       >
         <form onSubmit={handleSearch} className="flex items-center gap-2">
@@ -181,7 +177,6 @@ const TestCasesPage = () => {
         </select>
       </motion.div>
 
-      {/* Stats row */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
           { label: 'Total', value: testCases.length, color: 'text-gray-900 dark:text-white' },
@@ -190,9 +185,9 @@ const TestCasesPage = () => {
         ].map((stat, i) => (
           <motion.div
             key={i}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 + i * 0.05, duration: 0.3 }}
+            transition={{ delay: 0.15 + i * 0.07, duration: 0.3 }}
             className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 text-center"
           >
             <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
@@ -201,13 +196,12 @@ const TestCasesPage = () => {
         ))}
       </div>
 
-      {/* Test Case List */}
       {loading ? (
         <div className="text-center py-12 text-gray-400 dark:text-gray-500">Loading test cases...</div>
       ) : testCases.length === 0 ? (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.3 }}
           className="text-center py-12"
         >
@@ -226,13 +220,12 @@ const TestCasesPage = () => {
             {testCases.map((tc, index) => (
               <motion.div
                 key={tc.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
                 transition={{ delay: index * 0.04, duration: 0.25 }}
                 className={`${index !== testCases.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}
               >
-                {/* Test case row */}
                 <div className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <span className="text-gray-400 dark:text-gray-600 text-sm font-mono flex-shrink-0">
@@ -273,7 +266,6 @@ const TestCasesPage = () => {
                   </div>
                 </div>
 
-                {/* Expanded details */}
                 <AnimatePresence>
                   {expandedId === tc.id && (
                     <motion.div
@@ -310,7 +302,6 @@ const TestCasesPage = () => {
         </motion.div>
       )}
 
-      {/* New Test Case Modal */}
       <AnimatePresence>
         {showForm && (
           <motion.div

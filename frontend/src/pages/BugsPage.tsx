@@ -21,7 +21,7 @@ const statusColors: Record<string, string> = {
 }
 
 const BugsPage = () => {
-  const { selectedProject } = useProject()
+  const { selectedProject, refreshProjects } = useProject()
   const [bugs, setBugs] = useState<Bug[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -77,13 +77,11 @@ const BugsPage = () => {
     setError('')
     setSubmitting(true)
     try {
-      await bugService.createBug({
-        ...form,
-        projectId: selectedProject?.id || ''
-      })
+      await bugService.createBug({ ...form, projectId: selectedProject?.id || '' })
       setShowForm(false)
       setForm({ title: '', description: '', severity: 'MEDIUM', priority: 'MEDIUM', status: 'OPEN', environment: '', projectId: selectedProject?.id || '' })
       fetchBugs()
+      refreshProjects()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create bug')
     } finally {
@@ -118,17 +116,17 @@ const BugsPage = () => {
     >
       <div className="flex items-center justify-between mb-6">
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ delay: 0.05, duration: 0.3 }}
         >
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Bugs</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{bugs.length} total bugs tracked</p>
         </motion.div>
         <motion.button
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.05, duration: 0.3 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition"
         >
@@ -138,9 +136,9 @@ const BugsPage = () => {
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.3 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15, duration: 0.3 }}
         className="flex flex-wrap gap-3 mb-6"
       >
         <form onSubmit={handleSearch} className="flex items-center gap-2">
@@ -155,7 +153,6 @@ const BugsPage = () => {
             />
           </div>
         </form>
-
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
@@ -168,7 +165,6 @@ const BugsPage = () => {
           <option value="RETEST">Retest</option>
           <option value="CLOSED">Closed</option>
         </select>
-
         <select
           value={severityFilter}
           onChange={(e) => setSeverityFilter(e.target.value)}
@@ -186,9 +182,9 @@ const BugsPage = () => {
         <div className="text-center py-12 text-gray-400 dark:text-gray-500">Loading bugs...</div>
       ) : bugs.length === 0 ? (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15, duration: 0.3 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
           className="text-center py-12"
         >
           <BugIcon size={40} className="mx-auto text-gray-300 dark:text-gray-700 mb-3" />
@@ -199,16 +195,16 @@ const BugsPage = () => {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.3 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
           className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
         >
           <AnimatePresence>
             {bugs.map((bug, index) => (
               <motion.div
                 key={bug.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
                 transition={{ delay: index * 0.04, duration: 0.25 }}
                 className={`flex items-center justify-between px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
                   index !== bugs.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''

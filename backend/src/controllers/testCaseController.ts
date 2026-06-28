@@ -55,6 +55,7 @@ export const getTestCase = async (req: Request, res: Response) => {
 export const createTestCase = async (req: Request, res: Response) => {
   try {
     const { title, description, steps, expectedResult, priority, status, projectId } = req.body
+    const userId = (req as any).userId
 
     if (!title || !steps || !expectedResult || !projectId) {
       return res.status(400).json({ message: 'Title, steps, expected result and project are required' })
@@ -72,6 +73,15 @@ export const createTestCase = async (req: Request, res: Response) => {
       },
       include: {
         project: { select: { id: true, name: true } },
+      }
+    })
+
+    // Create notification for new test case
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: 'TEST_RUN_COMPLETED',
+        message: `New test case created: "${title}"`,
       }
     })
 

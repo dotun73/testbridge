@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, PlayCircle, CheckCircle, XCircle, GitBranch } from 'lucide-react'
+import { Plus, PlayCircle, CheckCircle, XCircle, GitBranch, Trash2 } from 'lucide-react'
 import { testRunService } from '../services/testRunService'
 import type { TestRun, CreateTestRunData } from '../services/testRunService'
 import { useProject } from '../context/ProjectContext'
@@ -31,7 +31,7 @@ const getResultCounts = (testRun: TestRun) => {
 }
 
 const TestRunsPage = () => {
-  const { selectedProject } = useProject()
+  const { selectedProject, refreshProjects } = useProject()
   const [testRuns, setTestRuns] = useState<TestRun[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('All')
@@ -79,13 +79,11 @@ const TestRunsPage = () => {
     setError('')
     setSubmitting(true)
     try {
-      await testRunService.createTestRun({
-        ...form,
-        projectId: selectedProject?.id || ''
-      })
+      await testRunService.createTestRun({ ...form, projectId: selectedProject?.id || '' })
       setShowForm(false)
       setForm({ name: '', projectId: selectedProject?.id || '', githubRef: '' })
       fetchTestRuns()
+      refreshProjects()
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create test run')
     } finally {
@@ -102,6 +100,17 @@ const TestRunsPage = () => {
     }
   }
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this test run?')) return
+    try {
+      await testRunService.deleteTestRun(id)
+      fetchTestRuns()
+      refreshProjects()
+    } catch (err) {
+      console.error('Failed to delete test run:', err)
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -110,17 +119,17 @@ const TestRunsPage = () => {
     >
       <div className="flex items-center justify-between mb-6">
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ delay: 0.05, duration: 0.3 }}
         >
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Test Runs</h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">{testRuns.length} test runs</p>
         </motion.div>
         <motion.button
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.05, duration: 0.3 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition"
         >
@@ -130,9 +139,9 @@ const TestRunsPage = () => {
       </div>
 
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, duration: 0.3 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15, duration: 0.3 }}
         className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit"
       >
         {tabs.map(tab => (
@@ -154,9 +163,9 @@ const TestRunsPage = () => {
         <div className="text-center py-12 text-gray-400 dark:text-gray-500">Loading test runs...</div>
       ) : testRuns.length === 0 ? (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15, duration: 0.3 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
           className="text-center py-12"
         >
           <PlayCircle size={40} className="mx-auto text-gray-300 dark:text-gray-700 mb-3" />
@@ -164,83 +173,87 @@ const TestRunsPage = () => {
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <AnimatePresence>
-            {testRuns.map((run, index) => {
-              const config = statusConfig[run.status]
-              const StatusIcon = config.icon
-              const passRate = getPassRate(run)
-              const counts = getResultCounts(run)
-              const total = run.testResults?.length || 0
+          {testRuns.map((run, index) => {
+            const config = statusConfig[run.status]
+            const StatusIcon = config.icon
+            const passRate = getPassRate(run)
+            const counts = getResultCounts(run)
+            const total = run.testResults?.length || 0
 
-              return (
-                <motion.div
-                  key={run.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: index * 0.07, duration: 0.3 }}
-                  className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 leading-snug flex-1 mr-2">
-                      {run.name}
-                    </h3>
-                    <span className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium flex-shrink-0 ${config.color}`}>
-                      <StatusIcon size={11} />
-                      {config.label}
+            return (
+              <motion.div
+                key={run.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.07, duration: 0.3 }}
+                className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 leading-snug flex-1 mr-2">
+                    {run.name}
+                  </h3>
+                  <span className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium flex-shrink-0 ${config.color}`}>
+                    <StatusIcon size={11} />
+                    {config.label}
+                  </span>
+                </div>
+
+                <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">{run.project?.name}</p>
+
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    <span>Progress</span>
+                    <span>{total} cases · {passRate}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
+                    <motion.div
+                      className="bg-indigo-500 h-1.5 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${passRate}%` }}
+                      transition={{ delay: 0.2 + index * 0.07, duration: 0.5, ease: 'easeOut' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500 mb-4">
+                  {run.githubRef && (
+                    <span className="flex items-center gap-1">
+                      <GitBranch size={11} />
+                      {run.githubRef}
                     </span>
-                  </div>
+                  )}
+                  <span>· {run.executor?.name?.split(' ')[0]}</span>
+                  <span>· {new Date(run.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                </div>
 
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">{run.project?.name}</p>
+                <div className="flex gap-2 mb-4">
+                  <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">{counts.pass} Pass</span>
+                  <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full font-medium">{counts.fail} Fail</span>
+                  <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-2 py-0.5 rounded-full font-medium">{counts.blocked} Block</span>
+                  <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full font-medium">{counts.pending} Pending</span>
+                </div>
 
-                  <div className="mb-3">
-                    <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      <span>Progress</span>
-                      <span>{total} cases · {passRate}%</span>
-                    </div>
-                    <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
-                      <motion.div
-                        className="bg-indigo-500 h-1.5 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${passRate}%` }}
-                        transition={{ delay: 0.2 + index * 0.07, duration: 0.5, ease: 'easeOut' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500 mb-4">
-                    {run.githubRef && (
-                      <span className="flex items-center gap-1">
-                        <GitBranch size={11} />
-                        {run.githubRef}
-                      </span>
-                    )}
-                    <span>· {run.executor?.name?.split(' ')[0]}</span>
-                    <span>· {new Date(run.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                  </div>
-
-                  <div className="flex gap-2">
-                    <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">{counts.pass} Pass</span>
-                    <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-0.5 rounded-full font-medium">{counts.fail} Fail</span>
-                    <span className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 px-2 py-0.5 rounded-full font-medium">{counts.blocked} Block</span>
-                    <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full font-medium">{counts.pending} Pending</span>
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                    <select
-                      value={run.status}
-                      onChange={(e) => handleStatusChange(run.id, e.target.value)}
-                      className="w-full text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      <option value="IN_PROGRESS">In Progress</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="ABORTED">Aborted</option>
-                    </select>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </AnimatePresence>
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex gap-2">
+                  <select
+                    value={run.status}
+                    onChange={(e) => handleStatusChange(run.id, e.target.value)}
+                    className="flex-1 text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="ABORTED">Aborted</option>
+                  </select>
+                  <button
+                    onClick={() => handleDelete(run.id)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition"
+                    title="Delete test run"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </motion.div>
+            )
+          })}
         </div>
       )}
 

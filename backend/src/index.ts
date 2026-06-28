@@ -7,6 +7,7 @@ import testRunRoutes from './routes/testRunRoutes'
 import testCaseRoutes from './routes/testCaseRoutes'
 import prisma from './config/prisma'
 import projectRoutes from './routes/projectRoutes'
+import notificationRoutes from './routes/notificationRoutes'
 
 dotenv.config()
 
@@ -22,6 +23,7 @@ app.use('/api/bugs', bugRoutes)
 app.use('/api/test-runs', testRunRoutes)
 app.use('/api/test-cases', testCaseRoutes)
 app.use('/api/projects', projectRoutes)
+app.use('/api/notifications', notificationRoutes)
 
 // Dashboard stats
 app.get('/api/dashboard/stats', async (req: any, res: any) => {

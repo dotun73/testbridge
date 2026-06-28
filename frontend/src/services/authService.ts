@@ -14,6 +14,19 @@ export const authService = {
     return response.data
   },
 
+  async updateProfile(data: { name?: string; avatar?: string }): Promise<any> {
+    const response = await axios.put(
+      `${API_URL}/auth/profile`,
+      data,
+      { headers: { Authorization: `Bearer ${this.getToken()}` } }
+    )
+    // Update stored user with new data
+    const currentUser = this.getUser()
+    const updatedUser = { ...currentUser, ...response.data.user }
+    this.saveUser(updatedUser)
+    return response.data.user
+  },
+
   saveToken(token: string) {
     localStorage.setItem('testbridge_token', token)
   },

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useProject } from '../context/ProjectContext'
+import { notificationService } from '../services/notificationService'
+import type { Notification } from '../services/notificationService'
 import {
   LayoutDashboard,
   Bug,
@@ -37,13 +39,15 @@ const Layout = ({ children }: Props) => {
   const location = useLocation()
   const user = authService.getUser()
   const [collapsed, setCollapsed] = useState(false)
-  const [notifications] = useState(3)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [showNotifications, setShowNotifications] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [search, setSearch] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [showSearchResults, setShowSearchResults] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLDivElement>(null)
+  const notificationRef = useRef<HTMLDivElement>(null)
 
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark'
@@ -67,9 +71,26 @@ const Layout = ({ children }: Props) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setShowSearchResults(false)
       }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const data = await notificationService.getNotifications()
+        setNotifications(data)
+      } catch (err) {
+        console.error('Failed to fetch notifications:', err)
+      }
+    }
+    fetchNotifications()
+    const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
@@ -92,6 +113,24 @@ const Layout = ({ children }: Props) => {
 
   const toggleDarkMode = () => {
     setDarkMode(prev => !prev)
+  }
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationService.markAllAsRead()
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+    } catch (err) {
+      console.error('Failed to mark notifications as read:', err)
+    }
+  }
+
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  const notificationIcon = (type: string) => {
+    if (type === 'TEST_FAILED') return '🐛'
+    if (type === 'TEST_RUN_COMPLETED') return '🧪'
+    if (type === 'MEMBER_INVITED') return '👤'
+    return '🔔'
   }
 
   return (
@@ -152,6 +191,8 @@ const Layout = ({ children }: Props) => {
 
           {/* Right side icons */}
           <div className="flex items-center gap-2 flex-shrink-0">
+
+            {/* Dark mode toggle */}
             <button
               onClick={toggleDarkMode}
               className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-white transition"
@@ -160,17 +201,85 @@ const Layout = ({ children }: Props) => {
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            <button className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-              <Bell size={18} />
-              {notifications > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {notifications}
-                </span>
+            {/* Notifications */}
+            <div className="relative" ref={notificationRef}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 top-12 w-80 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-50 overflow-hidden">
+
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Notification list */}
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500">
+                        <Bell size={28} className="mb-2 opacity-30" />
+                        <p className="text-sm">No notifications yet</p>
+                      </div>
+                    ) : (
+                      notifications.map(notification => (
+                        <div
+                          key={notification.id}
+                          className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
+                            !notification.read ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''
+                          }`}
+                        >
+                          <span className="text-base flex-shrink-0 mt-0.5">
+                            {notificationIcon(notification.type)}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs leading-snug ${
+                              !notification.read
+                                ? 'font-semibold text-gray-900 dark:text-white'
+                                : 'text-gray-600 dark:text-gray-400'
+                            }`}>
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                              {new Date(notification.createdAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
+                          {!notification.read && (
+                            <div className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-1.5" />
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
 
             <div className="w-px h-6 bg-gray-200 dark:bg-gray-700" />
 
+            {/* Profile dropdown */}
             <div className="relative" ref={profileMenuRef}>
               <button
                 onClick={() => setShowProfileMenu(!showProfileMenu)}

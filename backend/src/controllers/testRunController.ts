@@ -37,9 +37,7 @@ export const getTestRun = async (req: Request, res: Response) => {
         executor: { select: { id: true, name: true, email: true } },
         project: { select: { id: true, name: true } },
         testResults: {
-          include: {
-            testCase: true
-          }
+          include: { testCase: true }
         },
       }
     })
@@ -80,6 +78,15 @@ export const createTestRun = async (req: Request, res: Response) => {
       }
     })
 
+    // Create notification for new test run
+    await prisma.notification.create({
+      data: {
+        userId: executedBy,
+        type: 'TEST_RUN_COMPLETED',
+        message: `New test run started: "${name}"`,
+      }
+    })
+
     res.status(201).json({ message: 'Test run created successfully', testRun })
   } catch (error) {
     console.error('Create test run error:', error)
@@ -106,6 +113,17 @@ export const updateTestRun = async (req: Request, res: Response) => {
         testResults: true,
       }
     })
+
+    // Create notification when test run is completed or aborted
+    if (status === 'COMPLETED' || status === 'ABORTED') {
+      await prisma.notification.create({
+        data: {
+          userId: (req as any).userId,
+          type: 'TEST_RUN_COMPLETED',
+          message: `Test run "${testRun.name}" has been ${status === 'COMPLETED' ? 'completed' : 'aborted'}`,
+        }
+      })
+    }
 
     res.json({ message: 'Test run updated successfully', testRun })
   } catch (error) {
@@ -143,9 +161,7 @@ export const addTestResult = async (req: Request, res: Response) => {
         status,
         notes: notes || null,
       },
-      include: {
-        testCase: true,
-      }
+      include: { testCase: true }
     })
 
     res.status(201).json({ message: 'Test result added', testResult })

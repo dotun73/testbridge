@@ -86,6 +86,15 @@ export const createBug = async (req: Request, res: Response) => {
       }
     })
 
+    // Create notification for bug report
+    await prisma.notification.create({
+      data: {
+        userId: reportedBy,
+        type: 'TEST_FAILED',
+        message: `New bug reported: "${title}" (${severity || 'MEDIUM'} severity)`,
+      }
+    })
+
     res.status(201).json({ message: 'Bug created successfully', bug })
   } catch (error) {
     console.error('Create bug error:', error)

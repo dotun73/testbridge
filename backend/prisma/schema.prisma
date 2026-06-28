@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
- provider = "postgresql"
+  provider = "postgresql"
 }
 
 model User {
@@ -12,6 +12,7 @@ model User {
   email         String    @unique
   password      String
   role          Role      @default(MEMBER)
+  avatar        String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -39,8 +40,7 @@ model Project {
   members     ProjectMember[]
   testCases   TestCase[]
   testRuns    TestRun[]
-
-  bugs          Bug[]
+  bugs        Bug[]
 }
 
 model ProjectMember {
@@ -84,18 +84,18 @@ enum TestCaseStatus {
 }
 
 model TestRun {
-  id          String        @id @default(uuid())
-  name        String
-  projectId   String
-  executedBy  String
-  status      TestRunStatus @default(IN_PROGRESS)
-  githubRef   String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String        @id @default(uuid())
+  name          String
+  projectId     String
+  executedBy    String
+  status        TestRunStatus @default(IN_PROGRESS)
+  githubRef     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  executor    User          @relation(fields: [executedBy], references: [id])
-  testResults TestResult[]
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  executor      User          @relation(fields: [executedBy], references: [id])
+  testResults   TestResult[]
   notifications Notification[]
 }
 

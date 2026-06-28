@@ -18,11 +18,39 @@ router.get('/users', protect, async (req: any, res: any) => {
         name: true,
         email: true,
         role: true,
+        avatar: true,
         createdAt: true,
       },
       orderBy: { createdAt: 'asc' }
     })
     res.json({ users })
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' })
+  }
+})
+
+// Update profile
+router.put('/profile', protect, async (req: any, res: any) => {
+  try {
+    const { name, avatar } = req.body
+    const userId = req.userId
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(name && { name }),
+        ...(avatar !== undefined && { avatar }),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatar: true,
+      }
+    })
+
+    res.json({ message: 'Profile updated successfully', user: updatedUser })
   } catch (error) {
     res.status(500).json({ message: 'Internal server error' })
   }
