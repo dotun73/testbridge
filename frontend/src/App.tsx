@@ -10,6 +10,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import TestCasesPage from './pages/TestCasesPage'
 import ProjectsPage from './pages/ProjectsPage'
+import NotificationsPage from './pages/NotificationsPage'
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/test-cases" element={<TestCasesPage />} />
+                <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
               </Routes>
             </Layout>
           </ProtectedRoute>

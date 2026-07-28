@@ -4,13 +4,26 @@ import prisma from '../config/prisma'
 
 const router = Router()
 
-// GET all notifications for logged in user
+// GET recent notifications (capped at 20 for dropdown)
 router.get('/', protect, async (req: any, res: any) => {
   try {
     const notifications = await prisma.notification.findMany({
       where: { userId: req.userId },
       orderBy: { createdAt: 'desc' },
       take: 20,
+    })
+    res.json({ notifications })
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' })
+  }
+})
+
+// GET all notifications (for notifications page)
+router.get('/all', protect, async (req: any, res: any) => {
+  try {
+    const notifications = await prisma.notification.findMany({
+      where: { userId: req.userId },
+      orderBy: { createdAt: 'desc' },
     })
     res.json({ notifications })
   } catch (error) {

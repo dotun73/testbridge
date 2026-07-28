@@ -22,6 +22,11 @@ export const notificationService = {
     return response.data.notifications
   },
 
+  async getAllNotifications(): Promise<Notification[]> {
+    const response = await axios.get(`${API_URL}/notifications/all`, getAuthHeaders())
+    return response.data.notifications
+  },
+
   async markAllAsRead(): Promise<void> {
     await axios.put(`${API_URL}/notifications/read-all`, {}, getAuthHeaders())
   },

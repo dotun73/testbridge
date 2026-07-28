@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useProject } from '../context/ProjectContext'
 import { notificationService } from '../services/notificationService'
@@ -20,6 +20,7 @@ import {
   Search,
 } from 'lucide-react'
 import { authService } from '../services/authService'
+import axios from 'axios'
 
 interface Props {
   children: React.ReactNode
@@ -33,6 +34,8 @@ const navItems = [
   { label: 'Analytics', icon: BarChart2, path: '/analytics' },
 ]
 
+const API_URL = 'http://localhost:5000/api'
+
 const Layout = ({ children }: Props) => {
   const { projects, selectedProject, setSelectedProject } = useProject()
   const navigate = useNavigate()
@@ -43,11 +46,13 @@ const Layout = ({ children }: Props) => {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [search, setSearch] = useState('')
-  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searchResults, setSearchResults] = useState<{ bugs: any[], testCases: any[], testRuns: any[] }>({ bugs: [], testCases: [], testRuns: [] })
   const [showSearchResults, setShowSearchResults] = useState(false)
+  const [searching, setSearching] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLDivElement>(null)
   const notificationRef = useRef<HTMLDivElement>(null)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark'
@@ -93,18 +98,57 @@ const Layout = ({ children }: Props) => {
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    if (!search.trim()) {
-      setSearchResults([])
+  const performSearch = useCallback(async (query: string) => {
+    if (!query.trim() || !selectedProject?.id) {
+      setSearchResults({ bugs: [], testCases: [], testRuns: [] })
       setShowSearchResults(false)
       return
     }
-    const filtered = projects.filter(p =>
-      p.name.toLowerCase().includes(search.toLowerCase())
-    )
-    setSearchResults(filtered)
-    setShowSearchResults(true)
-  }, [search, projects])
+
+    setSearching(true)
+    const headers = { Authorization: `Bearer ${authService.getToken()}` }
+    const projectId = selectedProject.id
+
+    try {
+      const [bugsRes, testCasesRes, testRunsRes] = await Promise.all([
+        axios.get(`${API_URL}/bugs?projectId=${projectId}&search=${query}`, { headers }),
+        axios.get(`${API_URL}/test-cases?projectId=${projectId}&search=${query}`, { headers }),
+        axios.get(`${API_URL}/test-runs?projectId=${projectId}`, { headers }),
+      ])
+
+      const bugs = bugsRes.data.bugs || []
+      const testCases = testCasesRes.data.testCases || []
+      const testRuns = (testRunsRes.data.testRuns || []).filter((r: any) =>
+        r.name.toLowerCase().includes(query.toLowerCase())
+      )
+
+      setSearchResults({
+        bugs: bugs.slice(0, 3),
+        testCases: testCases.slice(0, 3),
+        testRuns: testRuns.slice(0, 3),
+      })
+      setShowSearchResults(true)
+    } catch (err) {
+      console.error('Search failed:', err)
+    } finally {
+      setSearching(false)
+    }
+  }, [selectedProject])
+
+  useEffect(() => {
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    if (!search.trim()) {
+      setSearchResults({ bugs: [], testCases: [], testRuns: [] })
+      setShowSearchResults(false)
+      return
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(search)
+    }, 300)
+    return () => {
+      if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
+    }
+  }, [search, performSearch])
 
   const handleLogout = () => {
     authService.logout()
@@ -124,14 +168,19 @@ const Layout = ({ children }: Props) => {
     }
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length
-
-  const notificationIcon = (type: string) => {
-    if (type === 'TEST_FAILED') return '🐛'
-    if (type === 'TEST_RUN_COMPLETED') return '🧪'
-    if (type === 'MEMBER_INVITED') return '👤'
-    return '🔔'
+  const handleSearchResultClick = (path: string) => {
+    setSearch('')
+    setShowSearchResults(false)
+    navigate(path)
   }
+
+  const hasUnread = notifications.some(n => !n.read)
+  const previewNotifications = notifications.slice(0, 5)
+  const hasMore = notifications.length > 5
+  const hasSearchResults =
+    searchResults.bugs.length > 0 ||
+    searchResults.testCases.length > 0 ||
+    searchResults.testRuns.length > 0
 
   return (
     <div className={darkMode ? 'dark' : ''} style={{ colorScheme: darkMode ? 'dark' : 'light' }}>
@@ -159,30 +208,90 @@ const Layout = ({ children }: Props) => {
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+
+              {/* Search Results Dropdown */}
               {showSearchResults && (
-                <div className="absolute top-10 left-0 right-0 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-50 overflow-hidden">
-                  {searchResults.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-gray-400 dark:text-gray-500">No projects found</div>
+                <div className="absolute top-10 left-0 right-0 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-50 overflow-hidden max-h-96 overflow-y-auto">
+                  {searching ? (
+                    <div className="px-4 py-3 text-sm text-gray-400 dark:text-gray-500">Searching...</div>
+                  ) : !hasSearchResults ? (
+                    <div className="px-4 py-3 text-sm text-gray-400 dark:text-gray-500">
+                      No results found for "{search}"
+                    </div>
                   ) : (
-                    searchResults.map(project => (
-                      <button
-                        key={project.id}
-                        onClick={() => {
-                          setSelectedProject(project)
-                          setSearch('')
-                          setShowSearchResults(false)
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left"
-                      >
-                        <Folder size={15} className="text-gray-400 flex-shrink-0" />
+                    <>
+                      {/* Bugs section */}
+                      {searchResults.bugs.length > 0 && (
                         <div>
-                          <p className="font-medium">{project.name}</p>
-                          {project.description && (
-                            <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{project.description}</p>
-                          )}
+                          <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                              <Bug size={11} />
+                              Bugs
+                            </p>
+                          </div>
+                          {searchResults.bugs.map((bug: any) => (
+                            <button
+                              key={bug.id}
+                              onClick={() => handleSearchResultClick('/bugs')}
+                              className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left border-b border-gray-50 dark:border-gray-800"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-900 dark:text-white truncate">{bug.title}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{bug.severity} · {bug.status}</p>
+                              </div>
+                            </button>
+                          ))}
                         </div>
-                      </button>
-                    ))
+                      )}
+
+                      {/* Test Cases section */}
+                      {searchResults.testCases.length > 0 && (
+                        <div>
+                          <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                              <ClipboardList size={11} />
+                              Test Cases
+                            </p>
+                          </div>
+                          {searchResults.testCases.map((tc: any) => (
+                            <button
+                              key={tc.id}
+                              onClick={() => handleSearchResultClick('/test-cases')}
+                              className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left border-b border-gray-50 dark:border-gray-800"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-900 dark:text-white truncate">{tc.title}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{tc.priority} · {tc.status}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Test Runs section */}
+                      {searchResults.testRuns.length > 0 && (
+                        <div>
+                          <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                              <PlayCircle size={11} />
+                              Test Runs
+                            </p>
+                          </div>
+                          {searchResults.testRuns.map((run: any) => (
+                            <button
+                              key={run.id}
+                              onClick={() => handleSearchResultClick('/test-runs')}
+                              className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left border-b border-gray-50 dark:border-gray-800"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-900 dark:text-white truncate">{run.name}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{run.status}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -208,20 +317,16 @@ const Layout = ({ children }: Props) => {
                 className="relative p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
               >
                 <Bell size={18} />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                    {unreadCount}
-                  </span>
+                {hasUnread && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
                 )}
               </button>
 
               {showNotifications && (
                 <div className="absolute right-0 top-12 w-80 bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-50 overflow-hidden">
-
-                  {/* Header */}
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Notifications</h3>
-                    {unreadCount > 0 && (
+                    {hasUnread && (
                       <button
                         onClick={handleMarkAllRead}
                         className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
@@ -230,47 +335,55 @@ const Layout = ({ children }: Props) => {
                       </button>
                     )}
                   </div>
-
-                  {/* Notification list */}
-                  <div className="max-h-80 overflow-y-auto">
+                  <div className="overflow-y-auto">
                     {notifications.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-8 text-gray-400 dark:text-gray-500">
                         <Bell size={28} className="mb-2 opacity-30" />
                         <p className="text-sm">No notifications yet</p>
                       </div>
                     ) : (
-                      notifications.map(notification => (
-                        <div
-                          key={notification.id}
-                          className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
-                            !notification.read ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''
-                          }`}
-                        >
-                          <span className="text-base flex-shrink-0 mt-0.5">
-                            {notificationIcon(notification.type)}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs leading-snug ${
-                              !notification.read
-                                ? 'font-semibold text-gray-900 dark:text-white'
-                                : 'text-gray-600 dark:text-gray-400'
-                            }`}>
-                              {notification.message}
-                            </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                              {new Date(notification.createdAt).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </p>
+                      <>
+                        {previewNotifications.map(notification => (
+                          <div
+                            key={notification.id}
+                            className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
+                              !notification.read ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-xs leading-snug ${
+                                !notification.read
+                                  ? 'font-semibold text-gray-900 dark:text-white'
+                                  : 'text-gray-600 dark:text-gray-400'
+                              }`}>
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                {new Date(notification.createdAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                            </div>
+                            {!notification.read && (
+                              <div className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-1.5" />
+                            )}
                           </div>
-                          {!notification.read && (
-                            <div className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-1.5" />
-                          )}
-                        </div>
-                      ))
+                        ))}
+                        {hasMore && (
+                          <button
+                            onClick={() => {
+                              setShowNotifications(false)
+                              navigate('/notifications')
+                            }}
+                            className="w-full px-4 py-3 text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition text-center border-t border-gray-100 dark:border-gray-800"
+                          >
+                            View all notifications
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
