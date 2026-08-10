@@ -4,6 +4,7 @@ import { testRunService } from '../services/testRunService'
 import type { TestRun, CreateTestRunData } from '../services/testRunService'
 import { useProject } from '../context/ProjectContext'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   IN_PROGRESS: { label: 'In Progress', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: PlayCircle },
@@ -38,12 +39,28 @@ const TestRunsPage = () => {
   const [showForm, setShowForm] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   const [form, setForm] = useState<CreateTestRunData>({
     name: '',
     projectId: selectedProject?.id || '',
     githubRef: '',
   })
+
+  // Sync the active tab with the ?status= query param whenever it's present
+  // (e.g. arriving from the Dashboard's "View all" links).
+  useEffect(() => {
+    const status = searchParams.get('status')
+    const statusToTab: Record<string, string> = {
+      IN_PROGRESS: 'In Progress',
+      COMPLETED: 'Completed',
+      ABORTED: 'Aborted',
+    }
+    if (status && statusToTab[status]) {
+      setActiveTab(statusToTab[status])
+    }
+  }, [searchParams])
 
   const fetchTestRuns = async () => {
     if (!selectedProject?.id) {
@@ -91,16 +108,18 @@ const TestRunsPage = () => {
     }
   }
 
-  const handleStatusChange = async (id: string, status: string) => {
+  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>, id: string) => {
+    e.stopPropagation()
     try {
-      await testRunService.updateTestRun(id, { status })
+      await testRunService.updateTestRun(id, { status: e.target.value })
       fetchTestRuns()
     } catch (err) {
       console.error('Failed to update test run:', err)
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
     if (!confirm('Are you sure you want to delete this test run?')) return
     try {
       await testRunService.deleteTestRun(id)
@@ -186,7 +205,8 @@ const TestRunsPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.07, duration: 0.3 }}
-                className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition"
+                onClick={() => navigate(`/test-runs/${run.id}`)}
+                className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5 hover:shadow-md transition cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 leading-snug flex-1 mr-2">
@@ -233,10 +253,13 @@ const TestRunsPage = () => {
                   <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full font-medium">{counts.pending} Pending</span>
                 </div>
 
-                <div className="pt-4 border-t border-gray-100 dark:border-gray-800 flex gap-2">
+                <div
+                  className="pt-4 border-t border-gray-100 dark:border-gray-800 flex gap-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <select
                     value={run.status}
-                    onChange={(e) => handleStatusChange(run.id, e.target.value)}
+                    onChange={(e) => handleStatusChange(e, run.id)}
                     className="flex-1 text-xs border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="IN_PROGRESS">In Progress</option>
@@ -244,7 +267,7 @@ const TestRunsPage = () => {
                     <option value="ABORTED">Aborted</option>
                   </select>
                   <button
-                    onClick={() => handleDelete(run.id)}
+                    onClick={(e) => handleDelete(e, run.id)}
                     className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition"
                     title="Delete test run"
                   >

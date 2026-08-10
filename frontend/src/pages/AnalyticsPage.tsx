@@ -3,12 +3,14 @@ import axios from 'axios'
 import { authService } from '../services/authService'
 import { useProject } from '../context/ProjectContext'
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 
 const AnalyticsPage = () => {
   const { selectedProject } = useProject()
   const [bugs, setBugs] = useState<any[]>([])
   const [testRuns, setTestRuns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,12 +53,15 @@ const AnalyticsPage = () => {
     { label: 'Closed', value: bugs.filter(b => b.status === 'CLOSED').length, color: 'bg-green-400' },
   ]
 
-  const passRateData = testRuns.map(run => {
+  const allPassRateData = testRuns.map(run => {
     const total = run.testResults?.length || 0
     const passed = run.testResults?.filter((r: any) => r.status === 'PASS').length || 0
     const rate = total > 0 ? Math.round((passed / total) * 100) : 0
-    return { name: run.name, rate }
+    return { id: run.id, name: run.name, rate }
   })
+
+  const passRateData = allPassRateData.slice(0, 10)
+  const hasMoreRuns = allPassRateData.length > 10
 
   const donutTotal = severityData.reduce((sum, d) => sum + d.value, 0)
   const maxStatus = Math.max(...statusData.map(d => d.value), 1)
@@ -210,7 +215,17 @@ const AnalyticsPage = () => {
           transition={{ delay: 0.25, duration: 0.3 }}
           className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5"
         >
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Test Run Pass Rates</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Test Run Pass Rates</h2>
+            {hasMoreRuns && (
+              <button
+                onClick={() => navigate('/test-runs')}
+                className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+              >
+                View all
+              </button>
+            )}
+          </div>
           {passRateData.length === 0 ? (
             <div className="flex items-center justify-center h-48 text-gray-400 dark:text-gray-500 text-sm">No data yet</div>
           ) : (
@@ -221,9 +236,11 @@ const AnalyticsPage = () => {
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 + i * 0.05, duration: 0.25 }}
+                  onClick={() => navigate(`/test-runs/${run.id}`)}
+                  className="cursor-pointer"
                 >
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    <span className="truncate flex-1 mr-2">{run.name}</span>
+                    <span className="truncate flex-1 mr-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition">{run.name}</span>
                     <span className="font-medium text-gray-700 dark:text-gray-300">{run.rate}%</span>
                   </div>
                   <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">

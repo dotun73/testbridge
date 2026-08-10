@@ -15,9 +15,9 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ClipboardList,
   Folder,
   Search,
+  ClipboardList,
 } from 'lucide-react'
 import { authService } from '../services/authService'
 import axios from 'axios'
@@ -29,7 +29,6 @@ interface Props {
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { label: 'Bugs', icon: Bug, path: '/bugs' },
-  { label: 'Test Cases', icon: ClipboardList, path: '/test-cases' },
   { label: 'Test Runs', icon: PlayCircle, path: '/test-runs' },
   { label: 'Analytics', icon: BarChart2, path: '/analytics' },
 ]
@@ -46,7 +45,7 @@ const Layout = ({ children }: Props) => {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [search, setSearch] = useState('')
-  const [searchResults, setSearchResults] = useState<{ bugs: any[], testCases: any[], testRuns: any[] }>({ bugs: [], testCases: [], testRuns: [] })
+  const [searchResults, setSearchResults] = useState<{ bugs: any[], testRuns: any[], testCases: any[] }>({ bugs: [], testRuns: [], testCases: [] })
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searching, setSearching] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement>(null)
@@ -100,7 +99,7 @@ const Layout = ({ children }: Props) => {
 
   const performSearch = useCallback(async (query: string) => {
     if (!query.trim() || !selectedProject?.id) {
-      setSearchResults({ bugs: [], testCases: [], testRuns: [] })
+      setSearchResults({ bugs: [], testRuns: [], testCases: [] })
       setShowSearchResults(false)
       return
     }
@@ -110,22 +109,55 @@ const Layout = ({ children }: Props) => {
     const projectId = selectedProject.id
 
     try {
-      const [bugsRes, testCasesRes, testRunsRes] = await Promise.all([
+      const [bugsRes, testRunsRes, testCasesRes] = await Promise.all([
         axios.get(`${API_URL}/bugs?projectId=${projectId}&search=${query}`, { headers }),
-        axios.get(`${API_URL}/test-cases?projectId=${projectId}&search=${query}`, { headers }),
         axios.get(`${API_URL}/test-runs?projectId=${projectId}`, { headers }),
+        axios.get(`${API_URL}/test-cases?projectId=${projectId}`, { headers }),
       ])
 
       const bugs = bugsRes.data.bugs || []
-      const testCases = testCasesRes.data.testCases || []
-      const testRuns = (testRunsRes.data.testRuns || []).filter((r: any) =>
+      const allTestRuns = testRunsRes.data.testRuns || []
+      const allTestCases = testCasesRes.data.testCases || []
+
+      const testRuns = allTestRuns.filter((r: any) =>
         r.name.toLowerCase().includes(query.toLowerCase())
       )
 
+      const matchedTestCases = allTestCases.filter((tc: any) =>
+        tc.title.toLowerCase().includes(query.toLowerCase())
+      )
+
+      // For each matched test case, find every run that contains it (via
+      // that run's test results) and pick the most recently created one —
+      // that's where we'll send the user when they click the result.
+      const testCases = matchedTestCases
+        .map((tc: any) => {
+          const runsContainingCase = allTestRuns
+            .map((run: any) => {
+              const result = (run.testResults || []).find((r: any) => r.testCaseId === tc.id)
+              return result ? { run, result } : null
+            })
+            .filter(Boolean) as { run: any; result: any }[]
+
+          if (runsContainingCase.length === 0) return null
+
+          const mostRecent = runsContainingCase.sort(
+            (a, b) => new Date(b.run.createdAt).getTime() - new Date(a.run.createdAt).getTime()
+          )[0]
+
+          return {
+            ...tc,
+            runId: mostRecent.run.id,
+            runName: mostRecent.run.name,
+            resultId: mostRecent.result.id,
+          }
+        })
+        .filter(Boolean)
+
       setSearchResults({
         bugs: bugs.slice(0, 3),
-        testCases: testCases.slice(0, 3),
         testRuns: testRuns.slice(0, 3),
+        testCases: testCases.slice(0, 3),
       })
       setShowSearchResults(true)
     } catch (err) {
@@ -138,7 +170,7 @@ const Layout = ({ children }: Props) => {
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current)
     if (!search.trim()) {
-      setSearchResults({ bugs: [], testCases: [], testRuns: [] })
+      setSearchResults({ bugs: [], testRuns: [], testCases: [] })
       setShowSearchResults(false)
       return
     }
@@ -168,19 +200,16 @@ const Layout = ({ children }: Props) => {
     }
   }
 
-  const handleSearchResultClick = (path: string) => {
+  const handleSearchResultClick = (path: string, state?: Record<string, any>) => {
     setSearch('')
     setShowSearchResults(false)
-    navigate(path)
+    navigate(path, state ? { state } : undefined)
   }
 
   const hasUnread = notifications.some(n => !n.read)
   const previewNotifications = notifications.slice(0, 5)
   const hasMore = notifications.length > 5
-  const hasSearchResults =
-    searchResults.bugs.length > 0 ||
-    searchResults.testCases.length > 0 ||
-    searchResults.testRuns.length > 0
+  const hasSearchResults = searchResults.bugs.length > 0 || searchResults.testRuns.length > 0 || searchResults.testCases.length > 0
 
   return (
     <div className={darkMode ? 'dark' : ''} style={{ colorScheme: darkMode ? 'dark' : 'light' }}>
@@ -232,36 +261,12 @@ const Layout = ({ children }: Props) => {
                           {searchResults.bugs.map((bug: any) => (
                             <button
                               key={bug.id}
-                              onClick={() => handleSearchResultClick('/bugs')}
+                              onClick={() => handleSearchResultClick('/bugs', { selectedBugId: bug.id })}
                               className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left border-b border-gray-50 dark:border-gray-800"
                             >
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm text-gray-900 dark:text-white truncate">{bug.title}</p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{bug.severity} · {bug.status}</p>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Test Cases section */}
-                      {searchResults.testCases.length > 0 && (
-                        <div>
-                          <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
-                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
-                              <ClipboardList size={11} />
-                              Test Cases
-                            </p>
-                          </div>
-                          {searchResults.testCases.map((tc: any) => (
-                            <button
-                              key={tc.id}
-                              onClick={() => handleSearchResultClick('/test-cases')}
-                              className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left border-b border-gray-50 dark:border-gray-800"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-900 dark:text-white truncate">{tc.title}</p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{tc.priority} · {tc.status}</p>
                               </div>
                             </button>
                           ))}
@@ -280,12 +285,36 @@ const Layout = ({ children }: Props) => {
                           {searchResults.testRuns.map((run: any) => (
                             <button
                               key={run.id}
-                              onClick={() => handleSearchResultClick('/test-runs')}
+                              onClick={() => handleSearchResultClick(`/test-runs/${run.id}`)}
                               className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left border-b border-gray-50 dark:border-gray-800"
                             >
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm text-gray-900 dark:text-white truncate">{run.name}</p>
                                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{run.status}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Test Cases section */}
+                      {searchResults.testCases.length > 0 && (
+                        <div>
+                          <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+                            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
+                              <ClipboardList size={11} />
+                              Test Cases
+                            </p>
+                          </div>
+                          {searchResults.testCases.map((tc: any) => (
+                            <button
+                              key={tc.id}
+                              onClick={() => handleSearchResultClick(`/test-runs/${tc.runId}`, { selectedResultId: tc.resultId })}
+                              className="w-full flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-left border-b border-gray-50 dark:border-gray-800"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-900 dark:text-white truncate">{tc.title}</p>
+                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{tc.priority} priority · in {tc.runName}</p>
                               </div>
                             </button>
                           ))}
@@ -508,7 +537,8 @@ const Layout = ({ children }: Props) => {
             <nav className="flex-1 px-2 py-4 space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon
-                const isActive = location.pathname === item.path
+                const isActive = location.pathname === item.path ||
+                  (item.path === '/test-runs' && location.pathname.startsWith('/test-runs'))
                 return (
                   <button
                     key={item.path}

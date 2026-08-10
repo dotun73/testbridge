@@ -4,6 +4,7 @@ import { authService } from '../services/authService'
 import { Bug, PlayCircle, CheckCircle } from 'lucide-react'
 import { useProject } from '../context/ProjectContext'
 import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 
 interface DashboardStats {
   openBugs: number
@@ -25,6 +26,7 @@ const DashboardPage = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const { selectedProject } = useProject()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -50,6 +52,9 @@ const DashboardPage = () => {
       </div>
     )
   }
+
+  const activeRuns = (stats?.activeRuns || []).slice(0, 10)
+  const recentBugs = (stats?.recentBugs || []).slice(0, 10)
 
   return (
     <motion.div
@@ -98,13 +103,18 @@ const DashboardPage = () => {
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Active Test Runs</h2>
-            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium cursor-pointer hover:underline">View all</span>
+            <button
+              onClick={() => navigate('/test-runs?status=IN_PROGRESS')}
+              className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+            >
+              View all
+            </button>
           </div>
-          {stats?.activeRuns?.length === 0 ? (
+          {activeRuns.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No active test runs</p>
           ) : (
             <div className="space-y-4">
-              {stats?.activeRuns?.map((run, i) => {
+              {activeRuns.map((run, i) => {
                 const total = run.testResults?.length || 0
                 const passed = run.testResults?.filter((r: any) => r.status === 'PASS').length || 0
                 const rate = total > 0 ? Math.round((passed / total) * 100) : 0
@@ -114,9 +124,11 @@ const DashboardPage = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.35 + i * 0.05, duration: 0.25 }}
+                    onClick={() => navigate(`/test-runs/${run.id}`)}
+                    className="cursor-pointer"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate flex-1 mr-2">{run.name}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate flex-1 mr-2 hover:text-indigo-600 dark:hover:text-indigo-400 transition">{run.name}</span>
                       <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-0.5 rounded-full font-medium flex-shrink-0">
                         In Progress
                       </span>
@@ -142,13 +154,18 @@ const DashboardPage = () => {
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Recent Bugs</h2>
-            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium cursor-pointer hover:underline">View all</span>
+            <button
+              onClick={() => navigate('/bugs')}
+              className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline"
+            >
+              View all
+            </button>
           </div>
-          {stats?.recentBugs?.length === 0 ? (
+          {recentBugs.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-6">No bugs reported yet</p>
           ) : (
             <div className="space-y-3">
-              {stats?.recentBugs?.map((bug: any, i: number) => (
+              {recentBugs.map((bug: any, i: number) => (
                 <motion.div
                   key={bug.id}
                   initial={{ opacity: 0, x: 10 }}

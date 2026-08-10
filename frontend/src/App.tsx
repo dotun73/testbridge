@@ -4,11 +4,11 @@ import SignupPage from './pages/SignupPage'
 import DashboardPage from './pages/DashboardPage'
 import BugsPage from './pages/BugsPage'
 import TestRunsPage from './pages/TestRunsPage'
+import TestCasesPage from './pages/TestCasesPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import SettingsPage from './pages/SettingsPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
-import TestCasesPage from './pages/TestCasesPage'
 import ProjectsPage from './pages/ProjectsPage'
 import NotificationsPage from './pages/NotificationsPage'
 
@@ -27,11 +27,11 @@ function App() {
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/bugs" element={<BugsPage />} />
                 <Route path="/test-runs" element={<TestRunsPage />} />
+                <Route path="/test-runs/:id" element={<TestCasesPage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/test-cases" element={<TestCasesPage />} />
-                <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
               </Routes>
             </Layout>
           </ProtectedRoute>
