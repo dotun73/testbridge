@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Plus, Search, Bug as BugIcon, Trash2, Pencil, Check, X, ChevronRight } from 'lucide-react'
 import { bugService } from '../services/bugService'
 import type { Bug, CreateBugData } from '../services/bugService'
@@ -22,6 +23,7 @@ const statusColors: Record<string, string> = {
 
 const BugsPage = () => {
   const { selectedProject, refreshProjects } = useProject()
+  const location = useLocation()
   const [bugs, setBugs] = useState<Bug[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -52,6 +54,10 @@ const BugsPage = () => {
     projectId: selectedProject?.id || '',
   })
 
+  // Refs for scroll-to-selected behavior when arriving from search
+  const bugRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const handledSelectKey = useRef<string | null>(null)
+
   const fetchBugs = async () => {
     if (!selectedProject?.id) {
       setBugs([])
@@ -67,7 +73,6 @@ const BugsPage = () => {
         search: search || undefined,
       })
       setBugs(data)
-      // Refresh selected bug if one is selected
       if (selectedBug) {
         const updated = data.find((b: Bug) => b.id === selectedBug.id)
         if (updated) setSelectedBug(updated)
@@ -82,6 +87,20 @@ const BugsPage = () => {
   useEffect(() => {
     fetchBugs()
   }, [selectedProject, statusFilter, severityFilter])
+
+  // When arriving from a search result, select the bug and scroll it into view
+  useEffect(() => {
+    const state = location.state as { selectedBugId?: string } | null
+    if (!state?.selectedBugId || bugs.length === 0 || handledSelectKey.current === location.key) return
+    const bug = bugs.find(b => b.id === state.selectedBugId)
+    if (!bug) return
+    setSelectedBug(bug)
+    setEditing(false)
+    handledSelectKey.current = location.key
+    setTimeout(() => {
+      bugRefs.current[bug.id]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
+  }, [bugs, location])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -252,6 +271,7 @@ const BugsPage = () => {
                   return (
                     <motion.div
                       key={bug.id}
+                      ref={(el) => { bugRefs.current[bug.id] = el }}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
