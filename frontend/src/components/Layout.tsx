@@ -127,9 +127,6 @@ const Layout = ({ children }: Props) => {
         tc.title.toLowerCase().includes(query.toLowerCase())
       )
 
-      // For each matched test case, find every run that contains it (via
-      // that run's test results) and pick the most recently created one —
-      // that's where we'll send the user when they click the result.
       const testCases = matchedTestCases
         .map((tc: any) => {
           const runsContainingCase = allTestRuns
@@ -196,7 +193,22 @@ const Layout = ({ children }: Props) => {
       await notificationService.markAllAsRead()
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
     } catch (err) {
-      console.error('Failed to mark notifications as read:', err)
+      console.error('Failed to mark all notifications as read:', err)
+    }
+  }
+
+  // Optimistically mark a single notification as read when the row is clicked.
+  // If the API call fails the UI stays marked read (acceptable trade-off —
+  // it will correct itself on the next 30s poll).
+  const handleMarkOneRead = async (notification: Notification) => {
+    if (notification.read) return
+    setNotifications(prev =>
+      prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+    )
+    try {
+      await notificationService.markAsRead(notification.id)
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err)
     }
   }
 
@@ -249,7 +261,6 @@ const Layout = ({ children }: Props) => {
                     </div>
                   ) : (
                     <>
-                      {/* Bugs section */}
                       {searchResults.bugs.length > 0 && (
                         <div>
                           <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
@@ -273,7 +284,6 @@ const Layout = ({ children }: Props) => {
                         </div>
                       )}
 
-                      {/* Test Runs section */}
                       {searchResults.testRuns.length > 0 && (
                         <div>
                           <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
@@ -297,7 +307,6 @@ const Layout = ({ children }: Props) => {
                         </div>
                       )}
 
-                      {/* Test Cases section */}
                       {searchResults.testCases.length > 0 && (
                         <div>
                           <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
@@ -330,7 +339,6 @@ const Layout = ({ children }: Props) => {
           {/* Right side icons */}
           <div className="flex items-center gap-2 flex-shrink-0">
 
-            {/* Dark mode toggle */}
             <button
               onClick={toggleDarkMode}
               className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-white transition"
@@ -375,8 +383,11 @@ const Layout = ({ children }: Props) => {
                         {previewNotifications.map(notification => (
                           <div
                             key={notification.id}
-                            className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition ${
-                              !notification.read ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''
+                            onClick={() => handleMarkOneRead(notification)}
+                            className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 dark:border-gray-800 transition ${
+                              notification.read
+                                ? 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                                : 'bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-100/60 dark:hover:bg-indigo-900/20 cursor-pointer'
                             }`}
                           >
                             <div className="flex-1 min-w-0">
@@ -490,8 +501,6 @@ const Layout = ({ children }: Props) => {
             flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-all duration-300 flex-shrink-0
             ${collapsed ? 'w-16' : 'w-56'}
           `}>
-
-            {/* Project Section */}
             <div className={`border-b border-gray-100 dark:border-gray-800 ${collapsed ? 'px-2 py-3' : 'px-3 py-3'}`}>
               {collapsed ? (
                 <button
@@ -533,7 +542,6 @@ const Layout = ({ children }: Props) => {
               )}
             </div>
 
-            {/* Nav Items */}
             <nav className="flex-1 px-2 py-4 space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon
@@ -559,7 +567,6 @@ const Layout = ({ children }: Props) => {
               })}
             </nav>
 
-            {/* Collapse toggle */}
             <div className="px-2 py-3 border-t border-gray-100 dark:border-gray-800">
               <button
                 onClick={() => setCollapsed(!collapsed)}
@@ -570,7 +577,6 @@ const Layout = ({ children }: Props) => {
             </div>
           </aside>
 
-          {/* Page content */}
           <main className="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-950">
             {children}
           </main>

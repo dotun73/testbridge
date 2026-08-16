@@ -328,12 +328,13 @@ const BugsPage = () => {
                     {editing ? (
                       <input
                         type="text"
+                        maxLength={100}
                         value={editForm.title}
                         onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                         className="flex-1 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     ) : (
-                      <h2 className="text-sm font-semibold text-gray-900 dark:text-white leading-snug flex-1">
+                      <h2 className="text-sm font-semibold text-gray-900 dark:text-white leading-snug flex-1 line-clamp-2">
                         {selectedBug.title}
                       </h2>
                     )}
@@ -547,10 +548,13 @@ const BugsPage = () => {
               )}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Title * <span className="text-xs font-normal text-gray-400 dark:text-gray-500">({form.title.length}/100)</span>
+                  </label>
                   <input
                     type="text"
                     required
+                    maxLength={100}
                     value={form.title}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     placeholder="Brief description of the bug"

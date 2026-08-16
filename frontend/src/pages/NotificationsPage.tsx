@@ -31,6 +31,18 @@ const NotificationsPage = () => {
     }
   }
 
+  const handleMarkOneRead = async (notification: Notification) => {
+    if (notification.read) return
+    setNotifications(prev =>
+      prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+    )
+    try {
+      await notificationService.markAsRead(notification.id)
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err)
+    }
+  }
+
   const unreadCount = notifications.filter(n => !n.read).length
 
   return (
@@ -87,9 +99,14 @@ const NotificationsPage = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.03, duration: 0.25 }}
-              className={`flex items-start gap-4 px-5 py-4 transition hover:bg-gray-50 dark:hover:bg-gray-800 ${
+              onClick={() => handleMarkOneRead(notification)}
+              className={`flex items-start gap-4 px-5 py-4 transition ${
                 index !== notifications.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''
-              } ${!notification.read ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}
+              } ${
+                notification.read
+                  ? 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                  : 'bg-indigo-50/50 dark:bg-indigo-900/10 hover:bg-indigo-100/60 dark:hover:bg-indigo-900/20 cursor-pointer'
+              }`}
             >
               <div className="flex-1 min-w-0">
                 <p className={`text-sm leading-snug ${
